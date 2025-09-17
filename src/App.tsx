@@ -12,6 +12,9 @@ import Fixed from "./pages/Fixed";
 import Alerts from "./pages/Alerts";
 import Pricing from "./pages/Pricing";
 import Account from "./pages/Account";
+import Login from "./pages/auth/Login";
+import Register from "./pages/auth/Register";
+import ResetPassword from "./pages/auth/ResetPassword";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminPayments from "./pages/admin/AdminPayments";
 import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
@@ -36,6 +39,11 @@ const App = () => (
           <Route path="/alertas" element={<Alerts />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/account" element={<Account />} />
+          
+          {/* Auth Routes */}
+          <Route path="/auth/login" element={<Login />} />
+          <Route path="/auth/register" element={<Register />} />
+          <Route path="/auth/reset-password" element={<ResetPassword />} />
           
           {/* Admin Routes */}
           <Route path="/admin/users" element={<AdminUsers />} />
