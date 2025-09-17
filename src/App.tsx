@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
+import Onboarding from "./pages/Onboarding";
 import Setup from "./pages/Setup";
 import DashboardPessoal from "./pages/DashboardPessoal";
 import DashboardEmpresa from "./pages/DashboardEmpresa";
@@ -13,6 +14,7 @@ import Fixed from "./pages/Fixed";
 import Alerts from "./pages/Alerts";
 import Invoices from "./pages/Invoices";
 import InvoiceDetails from "./pages/InvoiceDetails";
+import Analytics from "./pages/Analytics";
 import Pricing from "./pages/Pricing";
 import Account from "./pages/Account";
 import Login from "./pages/auth/Login";
@@ -34,6 +36,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/setup" element={<Setup />} />
           <Route path="/dashboard-pessoal" element={<DashboardPessoal />} />
           <Route path="/dashboard-empresa" element={<DashboardEmpresa />} />
@@ -43,6 +46,7 @@ const App = () => (
           <Route path="/alertas" element={<Alerts />} />
           <Route path="/invoices" element={<Invoices />} />
           <Route path="/invoices/:id" element={<InvoiceDetails />} />
+          <Route path="/analytics" element={<Analytics />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/account" element={<Account />} />
           
