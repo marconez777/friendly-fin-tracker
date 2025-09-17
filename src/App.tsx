@@ -11,6 +11,7 @@ import Staging from "./pages/Staging";
 import Fixed from "./pages/Fixed";
 import Alerts from "./pages/Alerts";
 import Pricing from "./pages/Pricing";
+import Account from "./pages/Account";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminPayments from "./pages/admin/AdminPayments";
 import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
@@ -34,6 +35,7 @@ const App = () => (
           <Route path="/fixas" element={<Fixed />} />
           <Route path="/alertas" element={<Alerts />} />
           <Route path="/pricing" element={<Pricing />} />
+          <Route path="/account" element={<Account />} />
           
           {/* Admin Routes */}
           <Route path="/admin/users" element={<AdminUsers />} />
