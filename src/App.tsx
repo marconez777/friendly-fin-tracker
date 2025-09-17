@@ -10,6 +10,7 @@ import Transactions from "./pages/Transactions";
 import Staging from "./pages/Staging";
 import Fixed from "./pages/Fixed";
 import Alerts from "./pages/Alerts";
+import Pricing from "./pages/Pricing";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminPayments from "./pages/admin/AdminPayments";
 import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/staging" element={<Staging />} />
           <Route path="/fixas" element={<Fixed />} />
           <Route path="/alertas" element={<Alerts />} />
+          <Route path="/pricing" element={<Pricing />} />
           
           {/* Admin Routes */}
           <Route path="/admin/users" element={<AdminUsers />} />
