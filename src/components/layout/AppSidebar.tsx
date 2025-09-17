@@ -20,6 +20,7 @@ const items = [
   { title: "Staging", url: "/staging", icon: RefreshCw },
   { title: "Fixas", url: "/fixas", icon: Calendar },
   { title: "Alertas", url: "/alertas", icon: Bell },
+  { title: "Invoices", url: "/invoices", icon: CreditCard },
   { title: "Pricing", url: "/pricing", icon: CreditCard },
   { title: "Account", url: "/account", icon: User },
   { title: "Admin", url: "/admin", icon: Shield },

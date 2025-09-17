@@ -10,6 +10,8 @@ import Transactions from "./pages/Transactions";
 import Staging from "./pages/Staging";
 import Fixed from "./pages/Fixed";
 import Alerts from "./pages/Alerts";
+import Invoices from "./pages/Invoices";
+import InvoiceDetails from "./pages/InvoiceDetails";
 import Pricing from "./pages/Pricing";
 import Account from "./pages/Account";
 import Login from "./pages/auth/Login";
@@ -37,6 +39,8 @@ const App = () => (
           <Route path="/staging" element={<Staging />} />
           <Route path="/fixas" element={<Fixed />} />
           <Route path="/alertas" element={<Alerts />} />
+          <Route path="/invoices" element={<Invoices />} />
+          <Route path="/invoices/:id" element={<InvoiceDetails />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/account" element={<Account />} />
           
