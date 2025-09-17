@@ -8,6 +8,10 @@ import DashboardPessoal from "./pages/DashboardPessoal";
 import DashboardEmpresa from "./pages/DashboardEmpresa";
 import Transactions from "./pages/Transactions";
 import Staging from "./pages/Staging";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminPayments from "./pages/admin/AdminPayments";
+import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
+import AdminPlans from "./pages/admin/AdminPlans";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +28,13 @@ const App = () => (
           <Route path="/dashboard-empresa" element={<DashboardEmpresa />} />
           <Route path="/transacoes" element={<Transactions />} />
           <Route path="/staging" element={<Staging />} />
+          
+          {/* Admin Routes */}
+          <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/payments" element={<AdminPayments />} />
+          <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
+          <Route path="/admin/plans" element={<AdminPlans />} />
+          
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
