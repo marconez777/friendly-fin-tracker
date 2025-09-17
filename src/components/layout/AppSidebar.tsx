@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/sidebar"
 
 const items = [
+  { title: "Setup", url: "/setup", icon: RefreshCw },
   { title: "Dashboard Pessoal", url: "/dashboard-pessoal", icon: Home },
   { title: "Dashboard Empresa", url: "/dashboard-empresa", icon: Building2 },
   { title: "Transações", url: "/transacoes", icon: Receipt },
