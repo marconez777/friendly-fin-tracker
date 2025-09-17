@@ -1,4 +1,4 @@
-import { Users, CreditCard, Calendar, Package } from "lucide-react"
+import { Users, CreditCard, Calendar, Package, FileText } from "lucide-react"
 import { NavLink } from "react-router-dom"
 
 import {
@@ -18,6 +18,7 @@ const adminItems = [
   { title: "Pagamentos", url: "/admin/payments", icon: CreditCard },
   { title: "Assinaturas", url: "/admin/subscriptions", icon: Calendar },
   { title: "Planos", url: "/admin/plans", icon: Package },
+  { title: "Logs", url: "/admin/logs", icon: FileText },
 ]
 
 export function AdminSidebar() {

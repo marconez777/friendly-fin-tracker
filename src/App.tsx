@@ -24,6 +24,8 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminPayments from "./pages/admin/AdminPayments";
 import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
 import AdminPlans from "./pages/admin/AdminPlans";
+import AdminLogs from "./pages/admin/AdminLogs";
+import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,6 +49,7 @@ const App = () => (
           <Route path="/invoices" element={<Invoices />} />
           <Route path="/invoices/:id" element={<InvoiceDetails />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/reports" element={<Reports />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/account" element={<Account />} />
           
@@ -60,6 +63,7 @@ const App = () => (
           <Route path="/admin/payments" element={<AdminPayments />} />
           <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
           <Route path="/admin/plans" element={<AdminPlans />} />
+          <Route path="/admin/logs" element={<AdminLogs />} />
           
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

@@ -1,4 +1,4 @@
-import { Home, Building2, Receipt, Calendar, Bell, Shield, RefreshCw, CreditCard, User, BarChart3 } from "lucide-react"
+import { Home, Building2, Receipt, Calendar, Bell, Shield, RefreshCw, CreditCard, User, BarChart3, FileText } from "lucide-react"
 import { NavLink } from "react-router-dom"
 
 import {
@@ -23,6 +23,7 @@ const items = [
   { title: "Alertas", url: "/alertas", icon: Bell },
   { title: "Invoices", url: "/invoices", icon: CreditCard },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
+  { title: "Reports", url: "/reports", icon: FileText },
   { title: "Pricing", url: "/pricing", icon: CreditCard },
   { title: "Account", url: "/account", icon: User },
   { title: "Admin", url: "/admin", icon: Shield },
