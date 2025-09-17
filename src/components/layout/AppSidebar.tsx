@@ -1,4 +1,4 @@
-import { Home, Building2, Receipt, Calendar, Bell, Shield } from "lucide-react"
+import { Home, Building2, Receipt, Calendar, Bell, Shield, RefreshCw } from "lucide-react"
 import { NavLink } from "react-router-dom"
 
 import {
@@ -17,7 +17,7 @@ const items = [
   { title: "Dashboard Pessoal", url: "/dashboard-pessoal", icon: Home },
   { title: "Dashboard Empresa", url: "/dashboard-empresa", icon: Building2 },
   { title: "Transações", url: "/transacoes", icon: Receipt },
-  { title: "Staging", url: "/staging", icon: Calendar },
+  { title: "Staging", url: "/staging", icon: RefreshCw },
   { title: "Fixas", url: "/fixas", icon: Calendar },
   { title: "Alertas", url: "/alertas", icon: Bell },
   { title: "Admin", url: "/admin", icon: Shield },

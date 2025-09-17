@@ -8,6 +8,7 @@ import DashboardPessoal from "./pages/DashboardPessoal";
 import DashboardEmpresa from "./pages/DashboardEmpresa";
 import Transactions from "./pages/Transactions";
 import Staging from "./pages/Staging";
+import Fixed from "./pages/Fixed";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminPayments from "./pages/admin/AdminPayments";
 import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/dashboard-empresa" element={<DashboardEmpresa />} />
           <Route path="/transacoes" element={<Transactions />} />
           <Route path="/staging" element={<Staging />} />
+          <Route path="/fixas" element={<Fixed />} />
           
           {/* Admin Routes */}
           <Route path="/admin/users" element={<AdminUsers />} />
