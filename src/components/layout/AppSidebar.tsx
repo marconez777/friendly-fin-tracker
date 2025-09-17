@@ -17,6 +17,7 @@ const items = [
   { title: "Dashboard Pessoal", url: "/dashboard-pessoal", icon: Home },
   { title: "Dashboard Empresa", url: "/dashboard-empresa", icon: Building2 },
   { title: "Transações", url: "/transacoes", icon: Receipt },
+  { title: "Staging", url: "/staging", icon: Calendar },
   { title: "Fixas", url: "/fixas", icon: Calendar },
   { title: "Alertas", url: "/alertas", icon: Bell },
   { title: "Admin", url: "/admin", icon: Shield },
