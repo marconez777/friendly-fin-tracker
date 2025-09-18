@@ -1,86 +1,105 @@
-import { DashboardLayout } from "@/components/layout/DashboardLayout"
-import { KPICard } from "@/components/dashboard/KPICard"
-import { BusinessBalanceChart } from "@/components/dashboard/BusinessBalanceChart"
-import { BusinessExpensesChart } from "@/components/dashboard/BusinessExpensesChart"
-import { TransactionHistoryTable } from "@/components/dashboard/TransactionHistoryTable"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Button } from "@/components/ui/button"
-import { Calendar } from "lucide-react"
+import { useState, useEffect, useCallback } from "react";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { KPICard } from "@/components/dashboard/KPICard";
+import { BusinessBalanceChart } from "@/components/dashboard/BusinessBalanceChart";
+import { BusinessExpensesChart } from "@/components/dashboard/BusinessExpensesChart";
+import { TransactionHistoryTable } from "@/components/dashboard/TransactionHistoryTable";
+import { getMonthlyBalance, MonthlyBalance } from "@/services/transactions";
+import { formatCurrency } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
+
+const MOCK_USER_ID = "a1b2c3d4-e5f6-7890-1234-567890abcdef"; // Replace with real user management later
+
+type ViewContext = 'Empresa' | 'Pessoal' | 'Consolidado';
 
 export default function DashboardEmpresa() {
-  const kpiData = [
-    {
-      title: "Saldo Atual (Empresa)",
-      value: "R$ 56.200,00",
-      trend: {
-        percentage: 18.2,
-        isPositive: true,
-        previousValue: "R$ 47.500,00"
-      }
-    },
-    {
-      title: "Recebido no Mês (Empresa)",
-      value: "R$ 28.400,00",
-      trend: {
-        percentage: 15.6,
-        isPositive: true,
-        previousValue: "R$ 24.600,00"
-      }
-    },
-    {
-      title: "A Pagar no Mês (Empresa)",
-      value: "R$ 18.200,00",
-      trend: {
-        percentage: 8.9,
-        isPositive: false,
-        previousValue: "R$ 16.700,00"
-      }
+  const [balance, setBalance] = useState<MonthlyBalance | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [viewContext, setViewContext] = useState<ViewContext>('Empresa');
+
+  const fetchBalance = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const today = new Date();
+      const month = {
+        from: format(startOfMonth(today), 'yyyy-MM-dd'),
+        to: format(endOfMonth(today), 'yyyy-MM-dd')
+      };
+
+      const context = viewContext === 'Consolidado' ? undefined : viewContext;
+
+      const data = await getMonthlyBalance(MOCK_USER_ID, month, context);
+      setBalance(data);
+    } catch (error) {
+      console.error(`Failed to fetch ${viewContext} balance:`, error);
+    } finally {
+      setIsLoading(false);
     }
-  ]
+  }, [viewContext]);
+
+  useEffect(() => {
+    fetchBalance();
+  }, [fetchBalance]);
+
+  const kpiData = balance ? [
+    {
+      title: `Saldo do Mês (${viewContext})`,
+      value: formatCurrency(balance.saldo),
+      trend: { percentage: 0, isPositive: balance.saldo >= 0, previousValue: "" }
+    },
+    {
+      title: `Recebido no Mês (${viewContext})`,
+      value: formatCurrency(balance.recebido),
+      trend: { percentage: 0, isPositive: true, previousValue: "" }
+    },
+    {
+      title: `A Receber (${viewContext})`,
+      value: formatCurrency(balance.aReceber),
+      trend: { percentage: 0, isPositive: true, previousValue: "" }
+    },
+    {
+      title: `A Pagar no Mês (${viewContext})`,
+      value: formatCurrency(balance.aPagar),
+      trend: { percentage: 0, isPositive: false, previousValue: "" }
+    }
+  ] : [];
 
   return (
-    <DashboardLayout title="Dashboard Empresa">
-      <div className="space-y-6">
-        {/* Filtros */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="w-full sm:w-48">
-            <Select defaultValue="atual">
-              <SelectTrigger>
-                <SelectValue placeholder="Selecionar mês" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="atual">Mês Atual</SelectItem>
-                <SelectItem value="anterior">Mês Anterior</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <Button variant="outline" className="w-full sm:w-auto">
-            <Calendar className="h-4 w-4 mr-2" />
-            Período Customizado
-          </Button>
-        </div>
+    <DashboardLayout title="Dashboard Consolidado">
+      <Tabs value={viewContext} onValueChange={(value) => setViewContext(value as ViewContext)} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="Consolidado">Consolidado</TabsTrigger>
+          <TabsTrigger value="Empresa">Empresa</TabsTrigger>
+          <TabsTrigger value="Pessoal">Pessoal</TabsTrigger>
+        </TabsList>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {kpiData.map((kpi, index) => (
-            <KPICard
-              key={index}
-              title={kpi.title}
-              value={kpi.value}
-              trend={kpi.trend}
-            />
-          ))}
-        </div>
+        <TabsContent value={viewContext} className="space-y-6">
+           {isLoading ? (
+            <p>Carregando dados...</p>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {kpiData.map((kpi, index) => (
+                  <KPICard
+                    key={index}
+                    title={kpi.title}
+                    value={kpi.value}
+                    trend={kpi.trend}
+                  />
+                ))}
+              </div>
 
-        {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <BusinessBalanceChart />
-          <BusinessExpensesChart />
-        </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <BusinessBalanceChart />
+                <BusinessExpensesChart />
+              </div>
 
-        {/* Transaction History Table */}
-        <TransactionHistoryTable />
-      </div>
+              <TransactionHistoryTable />
+            </>
+          )}
+        </TabsContent>
+      </Tabs>
     </DashboardLayout>
-  )
+  );
 }

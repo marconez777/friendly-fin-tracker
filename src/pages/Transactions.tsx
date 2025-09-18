@@ -1,105 +1,108 @@
-import { useState } from "react"
-import { DashboardLayout } from "@/components/layout/DashboardLayout"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Plus, Upload, ChevronLeft, ChevronRight } from "lucide-react"
-import { NewTransactionModal } from "@/components/transactions/NewTransactionModal"
-import { UploadExtractModal } from "@/components/transactions/UploadExtractModal"
-import { TransactionCard } from "@/components/transactions/TransactionCard"
-import { useIsMobile } from "@/hooks/use-mobile"
+import { useState, useEffect, useCallback } from "react";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Plus, Upload, ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
+import { NewTransactionModal } from "@/components/transactions/NewTransactionModal";
+import { UploadExtractModal } from "@/components/transactions/UploadExtractModal";
+import { TransactionCard } from "@/components/transactions/TransactionCard";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { getTransactions, deleteTransaction, Transaction } from "@/services/transactions";
+import { getCategories, Category } from "@/services/categories";
+import { useToast } from "@/components/ui/use-toast";
+import { subMonths, startOfMonth, endOfMonth, format } from 'date-fns';
 
-const mockTransactions = [
-  {
-    id: "1",
-    date: "15/12/2024",
-    description: "Supermercado Extra",
-    category: "Alimentação",
-    context: "Pessoal",
-    value: -250.80,
-    cardLabel: "Cartão Nubank"
-  },
-  {
-    id: "2", 
-    date: "14/12/2024",
-    description: "Salário Dezembro",
-    category: "Receita",
-    context: "Pessoal",
-    value: 4500.00
-  },
-  {
-    id: "3",
-    date: "13/12/2024",
-    description: "Venda Produto A",
-    category: "Receita",
-    context: "Empresa",
-    value: 2800.00
-  },
-  {
-    id: "4",
-    date: "12/12/2024",
-    description: "Uber",
-    category: "Transporte",
-    context: "Pessoal",
-    value: -28.50,
-    cardLabel: "Débito Itaú"
-  },
-  {
-    id: "5",
-    date: "11/12/2024",
-    description: "Aluguel Escritório",
-    category: "Infraestrutura",
-    context: "Empresa", 
-    value: -1200.00
-  },
-  {
-    id: "6",
-    date: "10/12/2024",
-    description: "Academia",
-    category: "Saúde",
-    context: "Pessoal",
-    value: -89.90,
-    cardLabel: "Cartão Nubank"
-  },
-  {
-    id: "7",
-    date: "09/12/2024",
-    description: "Material Escritório",
-    category: "Operacional",
-    context: "Empresa",
-    value: -320.00
-  },
-  {
-    id: "8",
-    date: "08/12/2024",
-    description: "Cinema",
-    category: "Lazer",
-    context: "Pessoal",
-    value: -45.00,
-    cardLabel: "Cartão Nubank"
-  }
-]
+const MOCK_USER_ID = "a1b2c3d4-e5f6-7890-1234-567890abcdef"; // Replace with real user management later
 
 export default function Transactions() {
-  const [newTransactionModalOpen, setNewTransactionModalOpen] = useState(false)
-  const [uploadModalOpen, setUploadModalOpen] = useState(false)
-  const [selectedMonth, setSelectedMonth] = useState("atual")
-  const [selectedCategory, setSelectedCategory] = useState("all")
-  const [selectedContext, setSelectedContext] = useState("all")
-  const [currentPage, setCurrentPage] = useState(1)
-  const isMobile = useIsMobile()
+  const [newTransactionModalOpen, setNewTransactionModalOpen] = useState(false);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
 
-  const itemsPerPage = 10
-  const totalPages = Math.ceil(mockTransactions.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const currentTransactions = mockTransactions.slice(startIndex, endIndex)
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+
+  const [filters, setFilters] = useState({
+    period: 'current_month',
+    categoryId: 'all',
+    context: 'all',
+    status: 'all',
+  });
+  const [pagination, setPagination] = useState({
+    page: 1,
+    pageSize: 10,
+  });
+
+  const { toast } = useToast();
+  const isMobile = useIsMobile();
+
+  const fetchTransactions = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      let periodFilter;
+      const today = new Date();
+      if (filters.period === 'current_month') {
+        periodFilter = { from: format(startOfMonth(today), 'yyyy-MM-dd'), to: format(endOfMonth(today), 'yyyy-MM-dd') };
+      } else if (filters.period === 'last_month') {
+        const lastMonth = subMonths(today, 1);
+        periodFilter = { from: format(startOfMonth(lastMonth), 'yyyy-MM-dd'), to: format(endOfMonth(lastMonth), 'yyyy-MM-dd') };
+      }
+
+      const { data, count } = await getTransactions({
+        page: pagination.page,
+        pageSize: pagination.pageSize,
+        filters: {
+          period: periodFilter,
+          category_id: filters.categoryId === 'all' ? undefined : Number(filters.categoryId),
+          context: filters.context === 'all' ? undefined : (filters.context as 'Pessoal' | 'Empresa'),
+          status: filters.status === 'all' ? undefined : (filters.status as 'Pendente' | 'Pago' | 'Recebido'),
+        }
+      });
+      setTransactions(data || []);
+      setTotalCount(count || 0);
+    } catch (error) {
+      toast({ title: "Erro ao buscar transações", description: (error as Error).message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [pagination, filters, toast]);
+
+  useEffect(() => {
+    fetchTransactions();
+  }, [fetchTransactions]);
+
+  useEffect(() => {
+    getCategories(MOCK_USER_ID)
+      .then(setCategories)
+      .catch(error => toast({ title: "Erro ao buscar categorias", description: (error as Error).message, variant: "destructive" }));
+  }, [toast]);
+
+  const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
+    setFilters(prev => ({ ...prev, [filterName]: value }));
+    setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page on filter change
+  };
+
+  const handleDelete = async (id: number) => {
+    if (confirm('Tem certeza que deseja excluir esta transação?')) {
+      try {
+        await deleteTransaction(id);
+        toast({ title: "Sucesso!", description: "Transação excluída." });
+        fetchTransactions(); // Refresh list
+      } catch (error) {
+        toast({ title: "Erro ao excluir", description: (error as Error).message, variant: "destructive" });
+      }
+    }
+  };
+
+  const totalPages = Math.ceil(totalCount / pagination.pageSize);
 
   return (
     <DashboardLayout title="Transações">
       <div className="space-y-6">
-        {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4">
           <Button onClick={() => setNewTransactionModalOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
@@ -111,153 +114,117 @@ export default function Transactions() {
           </Button>
         </div>
 
-        {/* Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Select value={filters.period} onValueChange={value => handleFilterChange('period', value)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="atual">Mês Atual</SelectItem>
-              <SelectItem value="anterior">Mês Anterior</SelectItem>
-              <SelectItem value="todos">Todos os Meses</SelectItem>
+              <SelectItem value="current_month">Mês Atual</SelectItem>
+              <SelectItem value="last_month">Mês Anterior</SelectItem>
+              <SelectItem value="all">Todo o Período</SelectItem>
             </SelectContent>
           </Select>
-
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger>
-              <SelectValue placeholder="Filtrar por categoria" />
-            </SelectTrigger>
+          <Select value={filters.categoryId} onValueChange={value => handleFilterChange('categoryId', value)}>
+            <SelectTrigger><SelectValue placeholder="Filtrar por categoria" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas as Categorias</SelectItem>
-              <SelectItem value="alimentacao">Alimentação</SelectItem>
-              <SelectItem value="transporte">Transporte</SelectItem>
-              <SelectItem value="moradia">Moradia</SelectItem>
-              <SelectItem value="saude">Saúde</SelectItem>
-              <SelectItem value="educacao">Educação</SelectItem>
-              <SelectItem value="lazer">Lazer</SelectItem>
-              <SelectItem value="receita">Receita</SelectItem>
-              <SelectItem value="infraestrutura">Infraestrutura</SelectItem>
-              <SelectItem value="operacional">Operacional</SelectItem>
+              {categories.map(cat => <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>)}
             </SelectContent>
           </Select>
-
-          <Select value={selectedContext} onValueChange={setSelectedContext}>
-            <SelectTrigger>
-              <SelectValue placeholder="Filtrar por contexto" />
-            </SelectTrigger>
+          <Select value={filters.context} onValueChange={value => handleFilterChange('context', value)}>
+            <SelectTrigger><SelectValue placeholder="Filtrar por contexto" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os Contextos</SelectItem>
-              <SelectItem value="personal">Pessoal</SelectItem>
-              <SelectItem value="business">Empresa</SelectItem>
+              <SelectItem value="Pessoal">Pessoal</SelectItem>
+              <SelectItem value="Empresa">Empresa</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filters.status} onValueChange={value => handleFilterChange('status', value)}>
+            <SelectTrigger><SelectValue placeholder="Filtrar por status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os Status</SelectItem>
+              <SelectItem value="Pendente">Pendente</SelectItem>
+              <SelectItem value="Pago">Pago</SelectItem>
+              <SelectItem value="Recebido">Recebido</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        {/* Transactions Display */}
-        {isMobile ? (
-          /* Mobile Card Layout */
-          <div className="space-y-4">
-            {currentTransactions.map((transaction) => (
-              <TransactionCard key={transaction.id} transaction={transaction} />
-            ))}
-          </div>
-        ) : (
-          /* Desktop Table Layout */
-          <div className="border rounded-lg">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead>Contexto</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
-                  <TableHead>Card Label</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {currentTransactions.map((transaction) => {
-                  const isPositive = transaction.value > 0
-                  return (
-                    <TableRow key={transaction.id}>
-                      <TableCell className="font-medium">
-                        {transaction.date}
-                      </TableCell>
-                      <TableCell>{transaction.description}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="text-xs">
-                          {transaction.category}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={transaction.context === 'Pessoal' ? 'default' : 'outline'}
-                          className="text-xs"
-                        >
-                          {transaction.context}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className={`text-right font-medium ${
-                        isPositive ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {isPositive ? '+' : '-'}R$ {Math.abs(transaction.value).toLocaleString('pt-BR', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2
-                        })}
-                      </TableCell>
-                      <TableCell>
-                        {transaction.cardLabel && (
-                          <Badge variant="outline" className="text-xs">
-                            {transaction.cardLabel}
-                          </Badge>
-                        )}
-                      </TableCell>
+        {isLoading ? <p>Carregando...</p> : (
+          <>
+            {isMobile ? (
+              <div className="space-y-4">
+                {transactions.map((t) => <TransactionCard key={t.id} transaction={t} onEdit={() => {}} onDelete={() => handleDelete(t.id)} />)}
+              </div>
+            ) : (
+              <div className="border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Descrição</TableHead>
+                      <TableHead>Categoria</TableHead>
+                      <TableHead>Contexto</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Valor</TableHead>
+                      <TableHead className="w-[40px]"></TableHead>
                     </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+                  </TableHeader>
+                  <TableBody>
+                    {transactions.map((t) => (
+                      <TableRow key={t.id}>
+                        <TableCell>{format(new Date(t.date), 'dd/MM/yyyy')}</TableCell>
+                        <TableCell>{t.description}</TableCell>
+                        <TableCell><Badge variant="secondary">{t.categories?.name || 'N/A'}</Badge></TableCell>
+                        <TableCell><Badge variant={t.context === 'Pessoal' ? 'default' : 'outline'}>{t.context}</Badge></TableCell>
+                        <TableCell><Badge variant="outline">{t.status}</Badge></TableCell>
+                        <TableCell className={`text-right font-medium ${t.type === 'Receita' ? 'text-green-600' : 'text-red-600'}`}>
+                          {t.type === 'Receita' ? '+' : '-'} R$ {t.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => { /* TODO: Implement Edit */ }}>Editar</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDelete(t.id)} className="text-red-500">Excluir</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
 
-        {/* Pagination */}
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
-            Página {currentPage} de {totalPages} ({mockTransactions.length} transações)
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Anterior
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages}
-            >
-              Próxima
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                Página {pagination.page} de {totalPages} ({totalCount} transações)
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button variant="outline" size="sm" onClick={() => setPagination(p => ({...p, page: p.page - 1}))} disabled={pagination.page <= 1}>
+                  <ChevronLeft className="h-4 w-4" /> Anterior
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setPagination(p => ({...p, page: p.page + 1}))} disabled={pagination.page >= totalPages}>
+                  Próxima <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Modals */}
-      <NewTransactionModal 
+      <NewTransactionModal
         open={newTransactionModalOpen}
         onOpenChange={setNewTransactionModalOpen}
+        userId={MOCK_USER_ID}
+        onTransactionAdded={fetchTransactions}
       />
       <UploadExtractModal
         open={uploadModalOpen}
         onOpenChange={setUploadModalOpen}
       />
     </DashboardLayout>
-  )
+  );
 }
