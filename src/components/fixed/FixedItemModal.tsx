@@ -1,180 +1,180 @@
-import { useState } from "react"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-
-export interface FixedItem {
-  id: string
-  description: string
-  type: 'Receita' | 'Despesa'
-  context: 'Pessoal' | 'Empresa'
-  category: string
-  value: number
-  dueDay: number
-  isActive: boolean
-}
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/components/ui/use-toast";
+import { getCategories, Category } from "@/services/categories";
+import type { FixedItem, NewFixedItem } from "@/services/fixedItems";
 
 interface FixedItemModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  item?: FixedItem | null
-  onSave: (item: Omit<FixedItem, 'id'>) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  item?: FixedItem | null;
+  onSave: (data: NewFixedItem | FixedItem) => void;
+  userId: string;
 }
 
-const categories = [
-  "Alimentação", "Transporte", "Moradia", "Saúde", "Educação", 
-  "Lazer", "Receita", "Infraestrutura", "Operacional", "Marketing",
-  "Fornecedores", "Impostos", "Serviços", "Salário", "Aluguel"
-]
+const formSchema = z.object({
+  description: z.string().min(1, "A descrição é obrigatória."),
+  type: z.enum(["Receita", "Despesa"]),
+  context: z.enum(["Pessoal", "Empresa"]),
+  category_id: z.coerce.number(),
+  value: z.coerce.number().min(0.01, "O valor deve ser maior que zero."),
+  due_day: z.coerce.number().min(1).max(31),
+  active: z.boolean(),
+});
 
-export function FixedItemModal({ open, onOpenChange, item, onSave }: FixedItemModalProps) {
-  const [formData, setFormData] = useState({
-    description: item?.description || '',
-    type: item?.type || 'Despesa' as const,
-    context: item?.context || 'Pessoal' as const,
-    category: item?.category || '',
-    value: item?.value || 0,
-    dueDay: item?.dueDay || 1,
-    isActive: item?.isActive ?? true
-  })
+export function FixedItemModal({ open, onOpenChange, item, onSave, userId }: FixedItemModalProps) {
+  const { toast } = useToast();
+  const [categories, setCategories] = useState<Category[]>([]);
 
-  const handleSave = () => {
-    onSave(formData)
-    onOpenChange(false)
-    // Reset form
-    setFormData({
-      description: '',
-      type: 'Despesa',
-      context: 'Pessoal',
-      category: '',
-      value: 0,
-      dueDay: 1,
-      isActive: true
-    })
-  }
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+  });
 
-  const isEdit = !!item
+  const selectedType = form.watch("type");
+
+  useEffect(() => {
+    if (userId) {
+      getCategories(userId)
+        .then(setCategories)
+        .catch(err => toast({ title: "Erro ao buscar categorias", description: err.message, variant: "destructive" }));
+    }
+  }, [userId, toast]);
+
+  useEffect(() => {
+    if (item) {
+      form.reset({
+        description: item.description,
+        type: item.type,
+        context: item.context,
+        category_id: item.category_id,
+        value: item.value,
+        due_day: item.due_day,
+        active: item.active,
+      });
+    } else {
+      form.reset({
+        description: "",
+        type: "Despesa",
+        context: "Pessoal",
+        value: 0,
+        due_day: 1,
+        active: true,
+      });
+    }
+  }, [item, form]);
+
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
+    if (item) {
+      onSave({ ...item, ...values });
+    } else {
+      onSave({ ...values, user_id: userId });
+    }
+    onOpenChange(false);
+  };
+
+  const filteredCategories = categories.filter(c => c.type === selectedType);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Editar Fixa' : 'Nova Fixa'}</DialogTitle>
+          <DialogTitle>{item ? 'Editar Item Fixo' : 'Novo Item Fixo'}</DialogTitle>
           <DialogDescription>
-            {isEdit ? 'Edite a despesa/receita fixa' : 'Adicione uma nova despesa ou receita fixa'}
+            {item ? 'Edite a despesa/receita fixa.' : 'Adicione uma nova despesa ou receita fixa.'}
           </DialogDescription>
         </DialogHeader>
-        
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="description">Descrição</Label>
-            <Input 
-              id="description" 
-              value={formData.description}
-              onChange={(e) => setFormData({...formData, description: e.target.value})}
-              placeholder="Ex: Aluguel, Salário..."
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="type">Tipo</Label>
-              <Select 
-                value={formData.type} 
-                onValueChange={(value: 'Receita' | 'Despesa') => setFormData({...formData, type: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Receita">Receita</SelectItem>
-                  <SelectItem value="Despesa">Despesa</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField control={form.control} name="description" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Descrição</FormLabel>
+                <FormControl><Input placeholder="Ex: Aluguel, Salário..." {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )}/>
             
-            <div>
-              <Label htmlFor="context">Contexto</Label>
-              <Select 
-                value={formData.context} 
-                onValueChange={(value: 'Pessoal' | 'Empresa') => setFormData({...formData, context: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Pessoal">Pessoal</SelectItem>
-                  <SelectItem value="Empresa">Empresa</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField control={form.control} name="type" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipo</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      <SelectItem value="Receita">Receita</SelectItem>
+                      <SelectItem value="Despesa">Despesa</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}/>
+              <FormField control={form.control} name="context" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Contexto</FormLabel>
+                   <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      <SelectItem value="Pessoal">Pessoal</SelectItem>
+                      <SelectItem value="Empresa">Empresa</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}/>
             </div>
-          </div>
 
-          <div>
-            <Label htmlFor="category">Categoria</Label>
-            <Select 
-              value={formData.category} 
-              onValueChange={(value) => setFormData({...formData, category: value})}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecionar categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            <FormField control={form.control} name="category_id" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Categoria</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
+                  <FormControl><SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    {filteredCategories.map(cat => <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}/>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="value">Valor (R$)</Label>
-              <Input 
-                id="value" 
-                type="number" 
-                step="0.01"
-                value={formData.value}
-                onChange={(e) => setFormData({...formData, value: parseFloat(e.target.value) || 0})}
-                placeholder="0,00"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField control={form.control} name="value" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Valor (R$)</FormLabel>
+                  <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}/>
+              <FormField control={form.control} name="due_day" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Dia Venc.</FormLabel>
+                  <FormControl><Input type="number" min="1" max="31" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}/>
             </div>
-            
-            <div>
-              <Label htmlFor="dueDay">Dia do Vencimento</Label>
-              <Input 
-                id="dueDay" 
-                type="number" 
-                min="1" 
-                max="31"
-                value={formData.dueDay}
-                onChange={(e) => setFormData({...formData, dueDay: parseInt(e.target.value) || 1})}
-              />
-            </div>
-          </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="active" 
-              checked={formData.isActive}
-              onCheckedChange={(checked) => setFormData({...formData, isActive: checked === true})}
-            />
-            <Label htmlFor="active">Ativo</Label>
-          </div>
+            <FormField control={form.control} name="active" render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>Ativo</FormLabel>
+                  <FormMessage />
+                </div>
+              </FormItem>
+            )}/>
 
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSave}>
-              {isEdit ? 'Salvar Alterações' : 'Salvar Fixa'}
-            </Button>
-          </div>
-        </div>
+            <DialogFooter className="pt-4">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+              <Button type="submit">Salvar</Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

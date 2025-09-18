@@ -1,79 +1,40 @@
-import { useState } from "react"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Check, X } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { format, parseISO } from 'date-fns';
+import { StagingItem } from "@/services/staging";
+import { Category } from "@/services/categories";
+import { formatCurrency } from "@/lib/utils";
 
-export interface StagingItem {
-  id: string
-  date: string
-  description: string
-  value: number
-  cardLabel?: string
-  suggestedContext: string
-  suggestedCategory: string
-  context: string
-  category: string
-  status: 'Pendente' | 'Aprovado' | 'Ignorado'
-}
+type StagingItemWithCategoryName = StagingItem & { categories: { name: string } | null };
+
+export type StagingItemDecision = {
+  context: 'Pessoal' | 'Empresa';
+  category_id: number;
+};
 
 interface StagingTableProps {
-  items: StagingItem[]
-  onUpdateItem: (id: string, updates: Partial<StagingItem>) => void
-  selectedItems: string[]
-  onSelectItem: (id: string, selected: boolean) => void
-  onSelectAll: (selected: boolean) => void
+  items: StagingItemWithCategoryName[];
+  categories: Category[];
+  selectedItemIds: number[];
+  onSelectItem: (id: number, selected: boolean) => void;
+  onSelectAll: (selected: boolean) => void;
+  decisions: Map<number, StagingItemDecision>;
+  onDecisionChange: (itemId: number, decision: StagingItemDecision) => void;
 }
 
-const categories = [
-  "Alimentação", "Transporte", "Moradia", "Saúde", "Educação", 
-  "Lazer", "Receita", "Infraestrutura", "Operacional", "Marketing",
-  "Fornecedores", "Impostos", "Serviços"
-]
-
-export function StagingTable({ 
-  items, 
-  onUpdateItem, 
-  selectedItems, 
-  onSelectItem, 
-  onSelectAll 
+export function StagingTable({
+  items,
+  categories,
+  selectedItemIds,
+  onSelectItem,
+  onSelectAll,
+  decisions,
+  onDecisionChange,
 }: StagingTableProps) {
-  const { toast } = useToast()
-  const allSelected = items.length > 0 && selectedItems.length === items.length
 
-  const handleApprove = (id: string) => {
-    onUpdateItem(id, { status: 'Aprovado' })
-    toast({
-      title: "Linha aprovada",
-      description: "Transação aprovada com sucesso. (Simulação)"
-    })
-  }
-
-  const handleIgnore = (id: string) => {
-    onUpdateItem(id, { status: 'Ignorado' })
-    toast({
-      title: "Linha ignorada", 
-      description: "Transação marcada como ignorada. (Simulação)"
-    })
-  }
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'Aprovado':
-        return <Badge className="bg-green-100 text-green-800">Aprovado</Badge>
-      case 'Ignorado':
-        return <Badge variant="secondary">Ignorado</Badge>
-      default:
-        return <Badge variant="outline">Pendente</Badge>
-    }
-  }
-
-  const canApprove = (item: StagingItem) => {
-    return item.context && item.context !== '' && item.status === 'Pendente'
-  }
+  const allSelected = items.length > 0 && selectedItemIds.length === items.length;
 
   return (
     <div className="border rounded-lg">
@@ -81,71 +42,45 @@ export function StagingTable({
         <TableHeader>
           <TableRow>
             <TableHead className="w-12">
-              <Checkbox
-                checked={allSelected}
-                onCheckedChange={(checked) => onSelectAll(checked === true)}
-              />
+              <Checkbox checked={allSelected} onCheckedChange={(checked) => onSelectAll(checked === true)} />
             </TableHead>
             <TableHead>Data</TableHead>
             <TableHead>Descrição</TableHead>
-            <TableHead className="text-right">Valor</TableHead>
-            <TableHead>Card Label</TableHead>
-            <TableHead>Sug. Contexto</TableHead>
-            <TableHead>Sug. Categoria</TableHead>
+            <TableHead>Valor</TableHead>
+            <TableHead>Sugestão</TableHead>
             <TableHead>Contexto*</TableHead>
             <TableHead>Categoria*</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {items.map((item) => {
-            const isSelected = selectedItems.includes(item.id)
-            const isPositive = item.value > 0
-            
+            const isSelected = selectedItemIds.includes(item.id);
+            const itemDecision = decisions.get(item.id);
+            const type = (item.value || 0) >= 0 ? 'Receita' : 'Despesa';
+            const filteredCategories = categories.filter(c => c.type === type);
+
             return (
               <TableRow key={item.id} className={isSelected ? "bg-muted/50" : ""}>
                 <TableCell>
-                  <Checkbox
-                    checked={isSelected}
-                    onCheckedChange={(checked) => onSelectItem(item.id, checked === true)}
-                  />
+                  <Checkbox checked={isSelected} onCheckedChange={(checked) => onSelectItem(item.id, checked === true)} />
                 </TableCell>
-                <TableCell className="font-medium">{item.date}</TableCell>
-                <TableCell className="max-w-xs truncate">{item.description}</TableCell>
-                <TableCell className={`text-right font-medium ${
-                  isPositive ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {isPositive ? '+' : '-'}R$ {Math.abs(item.value).toLocaleString('pt-BR', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                  })}
-                </TableCell>
+                <TableCell>{format(parseISO(item.date), 'dd/MM/yyyy')}</TableCell>
+                <TableCell>{item.description}</TableCell>
+                <TableCell className={item.value >= 0 ? "text-green-600" : "text-red-600"}>{formatCurrency(item.value)}</TableCell>
                 <TableCell>
-                  {item.cardLabel && (
-                    <Badge variant="outline" className="text-xs">
-                      {item.cardLabel}
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="secondary" className="text-xs">
-                    {item.suggestedContext}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="secondary" className="text-xs">
-                    {item.suggestedCategory}
-                  </Badge>
+                  <div className="flex flex-col gap-1">
+                    <Badge variant="secondary">{item.suggested_context}</Badge>
+                    <Badge variant="secondary">{item.categories?.name || 'N/A'}</Badge>
+                  </div>
                 </TableCell>
                 <TableCell>
                   <Select
-                    value={item.context}
-                    onValueChange={(value) => onUpdateItem(item.id, { context: value })}
+                    value={itemDecision?.context}
+                    onValueChange={(value: 'Pessoal' | 'Empresa') => {
+                      onDecisionChange(item.id, { ...itemDecision!, context: value });
+                    }}
                   >
-                    <SelectTrigger className="w-32">
-                      <SelectValue placeholder="Contexto" />
-                    </SelectTrigger>
+                    <SelectTrigger className="w-32"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Pessoal">Pessoal</SelectItem>
                       <SelectItem value="Empresa">Empresa</SelectItem>
@@ -154,49 +89,24 @@ export function StagingTable({
                 </TableCell>
                 <TableCell>
                   <Select
-                    value={item.category}
-                    onValueChange={(value) => onUpdateItem(item.id, { category: value })}
+                    value={String(itemDecision?.category_id)}
+                    onValueChange={(value) => {
+                      onDecisionChange(item.id, { ...itemDecision!, category_id: Number(value) });
+                    }}
                   >
-                    <SelectTrigger className="w-36">
-                      <SelectValue placeholder="Categoria" />
-                    </SelectTrigger>
+                    <SelectTrigger className="w-36"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                     <SelectContent>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      {filteredCategories.map((cat) => (
+                        <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </TableCell>
-                <TableCell>
-                  {getStatusBadge(item.status)}
-                </TableCell>
-                <TableCell>
-                  <div className="flex space-x-1">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleApprove(item.id)}
-                      disabled={!canApprove(item)}
-                      className="h-8 w-8 p-0"
-                    >
-                      <Check className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleIgnore(item.id)}
-                      disabled={item.status !== 'Pendente'}
-                      className="h-8 w-8 p-0"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
               </TableRow>
-            )
+            );
           })}
         </TableBody>
       </Table>
     </div>
-  )
+  );
 }

@@ -1,106 +1,44 @@
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Edit, Trash, Check } from "lucide-react"
-import { format } from "date-fns"
-import type { Alert } from "./AlertModal"
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Check } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { formatCurrency } from "@/lib/utils";
+import { UpcomingDueItem } from "@/services/alerts";
+import { Badge } from "@/components/ui/badge";
 
 interface AlertCardProps {
-  alert: Alert
-  onEdit: (alert: Alert) => void
-  onDelete: (id: string) => void
-  onComplete: (id: string) => void
-  isSelected: boolean
-  onSelect: (id: string, selected: boolean) => void
+  alert: UpcomingDueItem;
+  onMarkAsPaid: (sourceId: number, sourceType: 'transaction' | 'invoice') => void;
 }
 
-export function AlertCard({ alert, onEdit, onDelete, onComplete, isSelected, onSelect }: AlertCardProps) {
-  const isOverdue = alert.dueDate < new Date() && alert.status === 'Pendente'
-  const isCompleted = alert.status === 'Concluído'
+export function AlertCard({ alert, onMarkAsPaid }: AlertCardProps) {
+  const isTransaction = alert.type === 'transaction';
 
   return (
-    <Card className={cn(
-      "w-full",
-      isOverdue && "border-red-200 bg-red-50",
-      isCompleted && "opacity-75"
-    )}>
-      <CardContent className="p-4">
-        <div className="space-y-3">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start space-x-2 flex-1">
-              <Checkbox
-                checked={isSelected}
-                onCheckedChange={(checked) => onSelect(alert.id, checked === true)}
-                className="mt-1"
-              />
-              <div className="space-y-1 flex-1">
-                <h4 className="font-medium text-sm leading-none">
-                  {alert.title}
-                </h4>
-                <p className="text-xs text-muted-foreground">
-                  Vencimento: {format(alert.dueDate, "dd/MM/yyyy")}
-                </p>
-                {alert.value && (
-                  <p className="text-sm font-medium">
-                    R$ {alert.value.toLocaleString('pt-BR', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2
-                    })}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex flex-wrap gap-2">
-            <Badge variant={alert.status === 'Concluído' ? 'default' : 'destructive'} className="text-xs">
-              {alert.status}
-            </Badge>
-            <Badge variant="outline" className="text-xs">
-              {alert.originType}
-            </Badge>
-            {isOverdue && (
-              <Badge variant="destructive" className="text-xs">
-                Vencido
-              </Badge>
-            )}
-          </div>
-
-          <div className="flex justify-end space-x-2 pt-2">
-            {alert.status === 'Pendente' && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onComplete(alert.id)}
-                className="h-8 px-2"
-              >
-                <Check className="h-3 w-3" />
-              </Button>
-            )}
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onEdit(alert)}
-              className="h-8 px-2"
-            >
-              <Edit className="h-3 w-3" />
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onDelete(alert.id)}
-              className="h-8 px-2 text-red-600 hover:text-red-700"
-            >
-              <Trash className="h-3 w-3" />
-            </Button>
-          </div>
+    <Card className={alert.isOverdue ? "border-red-200 bg-red-50" : ""}>
+      <CardContent className="p-4 flex items-center justify-between">
+        <div className="space-y-1">
+          <h4 className="font-medium text-sm leading-none">{alert.description}</h4>
+          <p className="text-xs text-muted-foreground">
+            Vencimento: {format(parseISO(alert.dueDate), "dd/MM/yyyy")}
+          </p>
+          {isTransaction && (
+            <p className={`text-sm font-medium ${alert.value > 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatCurrency(alert.value)}
+            </p>
+          )}
+           {alert.isOverdue && <Badge variant="destructive">Vencido</Badge>}
         </div>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => onMarkAsPaid(alert.sourceId, alert.sourceType)}
+          className="h-8 px-2"
+        >
+          <Check className="h-4 w-4 mr-1" />
+          {alert.value > 0 ? 'Recebido' : 'Pago'}
+        </Button>
       </CardContent>
     </Card>
-  )
-}
-
-function cn(...classes: string[]) {
-  return classes.filter(Boolean).join(' ')
+  );
 }
